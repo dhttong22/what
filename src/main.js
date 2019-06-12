@@ -1,39 +1,109 @@
 import Vue from 'vue'
 import App from './App.vue'
-import ElementUI from 'element-ui'
-import axios from 'axios'
+import axios from "axios"
 import VueRouter from "vue-router"
-Vue.prototype.$axios = axios;
-//element的样式
+
+// element: 1.导入组件
+import ElementUI from "element-ui"
+// element的样式
 import 'element-ui/lib/theme-chalk/index.css';
 
-// element: 2.注册element插件
-Vue.use(ElementUI)
+// 导入组件
+import Login from "./pages/Login.vue";
+import Admin from "./pages/Admin.vue";
+import GoodsList from "./pages/GoodsList.vue";
+import CategoryList from "./pages/CategoryList.vue";
+import GoodAdd from './pages/GoodsAdd.vue'
+import GoodEdit from './pages/GoodsEdit.vue'
 
-import Login from './pages/Login.vue'
+// element: 2.注册element插件
+Vue.use(ElementUI);
 
 // 注册路由
 Vue.use(VueRouter);
 
+
 // 配置路由
 const routes = [
-  {path: "/login", component: Login}
-];
+  {
+    path: "/", 
+    redirect: "/admin/goods-list",
+    meta: "首页"},
+  {
+    path: "/login", 
+    component: Login, 
+    meta: "登录"
+  },
+  {
+    path: "/admin", 
+    component: Admin,
+    meta: "后台管理", 
+    children: [
+      {
+        path: "goods-list", 
+        component: GoodsList,
+        meta: "商品列表"
+      },
+      {
+        path:'goods-add',
+        component:GoodAdd,
+        meta:'添加商品'
+      },
+      {
+        path:'goods-edit/:id',
+        component:GoodEdit,
+        meta:'编辑商品'
+      },
+      {
+        path: "category-list", 
+        component: CategoryList ,
+        meta: "栏目列表"
+      }
+    ]
+  }
+]
 
 // 路由实例
 const router = new VueRouter({ routes });
+//处理登录和非登录页时候判断
+router.beforeEach((to,from,next)=>{
+  //判断是否登录
+  axios({
+    url: "http://localhost:8899/admin/account/islogin",
+    method:'GET',
+    //处理session跨域
+    withCredentials:true
+  }).then(res=>{
+    const {code} = res.data;
 
-Vue.config.productionTip = false
+    //访问的页面是登录页面
+    if(to.path === '/login'){
+      //如果已经登录了
+      if(code === 'logined'){
+        next('/admin/goods-list')
+      }else{
+        //未登录
+        next();
+      }
+    }else{
+      //访问非登录页
+      //如果已经登录
+      if(code==='logined'){
+        next()
+      }else{
+        //未登录
+        next('/login')
+      }
+    }
+  })
+})
+
+Vue.config.productionTip = false;
+// 绑定到原型
+Vue.prototype.$axios = axios;
 
 new Vue({
-  router,
-  render: h => h(App)
-}).$mount('#app')
-
-// new Vue({
-//   el:'#app',
-//   router,
-//   render:function(createElement){
-//     return createElement(App)
-//   }
-// })
+  render: h => h(App),
+  // 挂载路由
+  router
+}).$mount('#app') // $mount绑定控制区域，相当于el
